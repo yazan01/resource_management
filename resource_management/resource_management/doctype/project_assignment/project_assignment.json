@@ -1,0 +1,197 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "PA.#####",
+ "creation": "2023-04-22 12:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "assignment_details_section",
+  "project",
+  "project_name",
+  "column_break_3",
+  "employee",
+  "employee_name",
+  "section_break_6",
+  "start_date",
+  "end_date",
+  "column_break_9",
+  "allocation_percentage",
+  "allocation_details_section",
+  "allocation_reference",
+  "column_break_13",
+  "status",
+  "costing_section",
+  "hourly_cost_rate",
+  "column_break_17",
+  "estimated_total_cost"
+ ],
+ "fields": [
+  {
+   "fieldname": "assignment_details_section",
+   "fieldtype": "Section Break",
+   "label": "Assignment Details"
+  },
+  {
+   "fieldname": "project",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Project",
+   "options": "Project",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "project.project_name",
+   "fieldname": "project_name",
+   "fieldtype": "Data",
+   "label": "Project Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_3",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "employee",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Employee",
+   "options": "Employee",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "employee.employee_name",
+   "fieldname": "employee_name",
+   "fieldtype": "Data",
+   "label": "Employee Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_6",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "start_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Start Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "end_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "End Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_9",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "allocation_percentage",
+   "fieldtype": "Percent",
+   "in_list_view": 1,
+   "label": "Allocation Percentage",
+   "reqd": 1
+  },
+  {
+   "fieldname": "allocation_details_section",
+   "fieldtype": "Section Break",
+   "label": "Allocation Details"
+  },
+  {
+   "fieldname": "allocation_reference",
+   "fieldtype": "Link",
+   "label": "Allocation Reference",
+   "options": "Resource Allocation",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_13",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Active",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "Active\nCompleted\nCancelled",
+   "reqd": 1
+  },
+  {
+   "fieldname": "costing_section",
+   "fieldtype": "Section Break",
+   "label": "Costing Details"
+  },
+  {
+   "fieldname": "hourly_cost_rate",
+   "fieldtype": "Currency",
+   "label": "Hourly Cost Rate",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_17",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "estimated_total_cost",
+   "fieldtype": "Currency",
+   "label": "Estimated Total Cost",
+   "read_only": 1
+  }
+ ],
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2023-04-22 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Resource Management",
+ "name": "Project Assignment",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HR Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "create": 0,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Projects Manager",
+   "share": 1,
+   "write": 0
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}
