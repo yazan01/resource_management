@@ -1,0 +1,308 @@
+{% extends "templates/web.html" %}
+
+{% block title %}CGO Resource Dashboard{% endblock %}
+
+{% block header %}
+<h1>CGO Resource Dashboard</h1>
+{% endblock %}
+
+{% block style %}
+<style>
+  .dashboard-section {
+    margin-bottom: 30px;
+  }
+  .card {
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+  }
+  .card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+  }
+  .card-header {
+    background-color: #f8f9fa;
+    font-weight: bold;
+  }
+  .alert-ending-soon {
+    background-color: #fff3cd;
+    border-color: #ffeeba;
+  }
+  .alert-unallocated {
+    background-color: #d1ecf1;
+    border-color: #bee5eb;
+  }
+  .filter-container {
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+  }
+  .progress {
+    height: 20px;
+  }
+  .table th {
+    background-color: #f8f9fa;
+  }
+</style>
+{% endblock %}
+
+{% block page_content %}
+<div class="resource-dashboard">
+  <!-- Filters -->
+  <div class="filter-container">
+    <form method="GET" action="">
+      <div class="row">
+        <div class="col-md-3">
+          <div class="form-group">
+            <label for="department">Department</label>
+            <select class="form-control" id="department" name="department">
+              <option value="">All Departments</option>
+              {% for dept in filters.departments %}
+              <option value="{{ dept.name }}" {% if filters.current_department == dept.name %}selected{% endif %}>{{ dept.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="form-group">
+            <label for="project">Project</label>
+            <select class="form-control" id="project" name="project">
+              <option value="">All Projects</option>
+              {% for proj in filters.projects %}
+              <option value="{{ proj.name }}" {% if filters.current_project == proj.name %}selected{% endif %}>{{ proj.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="form-group">
+            <label for="status">Request Status</label>
+            <select class="form-control" id="status" name="status">
+              <option value="">All Statuses</option>
+              <option value="Requested" {% if filters.current_status == "Requested" %}selected{% endif %}>Requested</option>
+              <option value="Approved" {% if filters.current_status == "Approved" %}selected{% endif %}>Approved</option>
+              <option value="Rejected" {% if filters.current_status == "Rejected" %}selected{% endif %}>Rejected</option>
+            </select>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <label>&nbsp;</label>
+          <button type="submit" class="btn btn-primary form-control">Apply Filters</button>
+        </div>
+      </div>
+    </form>
+  </div>
+  
+  <!-- Allocation Summary -->
+  <div class="dashboard-section">
+    <div class="card">
+      <div class="card-header">
+        Department Allocation Summary
+      </div>
+      <div class="card-body">
+        <div class="row">
+          {% for dept in allocation_summary %}
+          <div class="col-md-4 mb-3">
+            <div class="card">
+              <div class="card-body">
+                <h5 class="card-title">{{ dept.department }}</h5>
+                <p>Total Employees: {{ dept.total_employees }}</p>
+                <p>Allocated: {{ dept.allocated_employees }} ({{ dept.allocation_percentage }}%)</p>
+                <p>Unallocated: {{ dept.unallocated_employees }}</p>
+                <div class="progress">
+                  <div class="progress-bar" role="progressbar" style="width: {{ dept.allocation_percentage }}%;" 
+                       aria-valuenow="{{ dept.allocation_percentage }}" aria-valuemin="0" aria-valuemax="100">
+                    {{ dept.allocation_percentage }}%
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Assignments Ending Soon -->
+  <div class="dashboard-section">
+    <div class="card alert-ending-soon">
+      <div class="card-header">
+        Assignments Ending Soon (Next 30 Days)
+      </div>
+      <div class="card-body">
+        {% if dashboard_data.ending_soon %}
+        <div class="table-responsive">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Employee</th>
+                <th>Project</th>
+                <th>Allocation %</th>
+                <th>End Date</th>
+                <th>Remaining Days</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for assignment in dashboard_data.ending_soon %}
+              <tr>
+                <td>{{ assignment.employee_name }}</td>
+                <td>{{ assignment.project_name }}</td>
+                <td>{{ assignment.allocation_percentage }}%</td>
+                <td>{{ assignment.end_date }}</td>
+                <td>{{ assignment.remaining_days }}</td>
+                <td>
+                  <a href="/app/resource-allocation/new-resource-allocation?employee={{ assignment.employee }}&project={{ assignment.project }}" 
+                     class="btn btn-sm btn-primary">Extend</a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <p>No assignments ending in the next 30 days.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Unallocated Employees -->
+  <div class="dashboard-section">
+    <div class="card alert-unallocated">
+      <div class="card-header">
+        Unallocated Employees
+      </div>
+      <div class="card-body">
+        {% if dashboard_data.unallocated %}
+        <div class="table-responsive">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Employee</th>
+                <th>Department</th>
+                <th>Designation</th>
+                <th>Reports To</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for employee in dashboard_data.unallocated %}
+              <tr>
+                <td>{{ employee.employee_name }}</td>
+                <td>{{ employee.department }}</td>
+                <td>{{ employee.designation }}</td>
+                <td>{{ employee.reports_to }}</td>
+                <td>
+                  <a href="/app/resource-allocation/new-resource-allocation?employee={{ employee.name }}" 
+                     class="btn btn-sm btn-success">Allocate</a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <p>All employees are currently allocated to projects.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  
+  <!-- Resource Allocation Requests -->
+  <div class="dashboard-section">
+    <div class="card">
+      <div class="card-header">
+        Resource Allocation Requests
+      </div>
+      <div class="card-body">
+        {% if dashboard_data.allocation_requests %}
+        <div class="table-responsive">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Request ID</th>
+                <th>Employee</th>
+                <th>Project</th>
+                <th>Allocation %</th>
+                <th>Period</th>
+                <th>Requested By</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for request in dashboard_data.allocation_requests %}
+              <tr>
+                <td>{{ request.name }}</td>
+                <td>{{ request.employee_name }}</td>
+                <td>{{ request.project_name }}</td>
+                <td>{{ request.allocation_percentage }}%</td>
+                <td>{{ request.start_date }} to {{ request.end_date }}</td>
+                <td>{{ request.requested_by }}</td>
+                <td>{{ request.status }}</td>
+                <td>
+                  <a href="/app/resource-allocation/{{ request.name }}" class="btn btn-sm btn-info">View</a>
+                  {% if request.status == "Requested" %}
+                  <a href="/api/method/resource_management.api.resource_allocation.approve_request?name={{ request.name }}" 
+                     class="btn btn-sm btn-success">Approve</a>
+                  <a href="/api/method/resource_management.api.resource_allocation.reject_request?name={{ request.name }}" 
+                     class="btn btn-sm btn-danger">Reject</a>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <p>No pending resource allocation requests.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  
+  <!-- Current Allocations -->
+  <div class="dashboard-section">
+    <div class="card">
+      <div class="card-header">
+        Current Resource Allocations
+      </div>
+      <div class="card-body">
+        {% if dashboard_data.current_allocations %}
+        <div class="table-responsive">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Employee</th>
+                <th>Project</th>
+                <th>Allocation %</th>
+                <th>Start Date</th>
+                <th>End Date</th>
+                <th>Remaining Days</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for allocation in dashboard_data.current_allocations %}
+              <tr>
+                <td>{{ allocation.employee_name }}</td>
+                <td>{{ allocation.project_name }}</td>
+                <td>{{ allocation.allocation_percentage }}%</td>
+                <td>{{ allocation.start_date }}</td>
+                <td>{{ allocation.end_date }}</td>
+                <td>{{ allocation.remaining_days }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <p>No active resource allocations.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
