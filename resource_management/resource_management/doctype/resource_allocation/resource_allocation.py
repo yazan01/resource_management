@@ -79,3 +79,70 @@ class ResourceAllocation(Document):
         project_assignment.end_date = self.end_date
         project_assignment.allocation_percentage = self.allocation_percentage
         project_assignment.save()
+
+    def update_project_allocations(project):
+    """Update project's resource allocations"""
+    if not frappe.db.exists("Project", project):
+        return
+    
+    project_doc = frappe.get_doc("Project", project)
+    
+    # Get current active project assignments
+    assignments = frappe.get_all("Project Assignment", 
+        filters={
+            "project": project,
+            "status": "Active",
+            "docstatus": 1
+        },
+        fields=["name", "employee", "start_date", "end_date", 
+                "allocation_percentage", "estimated_total_cost"]
+    )
+    
+    # Update the project document
+    if hasattr(project_doc, "project_assignments"):
+        # Clear existing assignments
+        project_doc.project_assignments = []
+        
+        # Add current assignments - for Table MultiSelect, we only need the name of the linked document
+        for assignment in assignments:
+            project_doc.append("project_assignments", {
+                "project_assignment": assignment.name  # This is the link field for Table MultiSelect
+            })
+        
+        # Recalculate total resource cost
+        total_cost = sum([flt(assignment.estimated_total_cost) for assignment in assignments])
+        if hasattr(project_doc, "estimated_resource_cost"):
+            project_doc.estimated_resource_cost = total_cost
+        
+        project_doc.save()
+
+    def update_employee_allocations(employee):
+    """Update employee's current allocations"""
+    if not frappe.db.exists("Employee", employee):
+        return
+    
+    employee_doc = frappe.get_doc("Employee", employee)
+    
+    # Get current active project assignments
+    assignments = frappe.get_all("Project Assignment", 
+        filters={
+            "employee": employee,
+            "status": "Active",
+            "docstatus": 1
+        },
+        fields=["name", "project", "start_date", "end_date", 
+                "allocation_percentage", "estimated_total_cost"]
+    )
+    
+    # Update the employee document
+    if hasattr(employee_doc, "current_allocations"):
+        # Clear existing allocations
+        employee_doc.current_allocations = []
+        
+        # Add current assignments - for Table MultiSelect, we only need the name of the linked document
+        for assignment in assignments:
+            employee_doc.append("current_allocations", {
+                "project_assignment": assignment.name  # This is the link field for Table MultiSelect
+            })
+        
+        employee_doc.save()
