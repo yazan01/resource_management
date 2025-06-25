@@ -109,7 +109,6 @@ doc_events = {
 		"validate": "resource_management.api.resource_allocation.validate_resource_allocation_status_change",
 		"before_save": "resource_management.api.resource_allocation.before_save_resource_allocation",
 		"on_submit": "resource_management.api.resource_allocation.on_submit_resource_allocation",
-		"on_update_after_submit": "resource_management.api.resource_allocation.on_update_after_submit_resource_allocation",
 		"on_cancel": "resource_management.api.resource_allocation.on_cancel_resource_allocation"
 	}
 }
@@ -119,14 +118,13 @@ doc_events = {
 
 scheduler_events = {
 	"daily": [
-		"resource_management.api.resource_allocation.send_pending_approval_reminders",
-		"resource_management.api.resource_allocation.send_allocation_ending_notifications"
+		"resource_management.scheduled_tasks.task_config.daily"
 	],
 	"weekly": [
-		"resource_management.api.resource_allocation.generate_weekly_reports"
+		"resource_management.scheduled_tasks.task_config.weekly"
 	],
 	"monthly": [
-		"resource_management.api.resource_allocation.archive_old_allocations"
+		"resource_management.scheduled_tasks.task_config.monthly"
 	]
 }
 
