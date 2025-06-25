@@ -85,11 +85,11 @@ app_license = "MIT"
 # Permissions evaluated in scripted ways
 
 permission_query_conditions = {
-	"Resource Allocation": "resource_management.api.resource_allocation.get_permission_query_conditions",
+	"Resource Allocation": "resource_management.api.resource_allocation_permissions.get_permission_query_conditions",
 }
 
 has_permission = {
-	"Resource Allocation": "resource_management.api.resource_allocation.has_permission",
+	"Resource Allocation": "resource_management.api.resource_allocation_permissions.has_permission",
 }
 
 # DocType Class
