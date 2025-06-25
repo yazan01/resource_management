@@ -5,6 +5,219 @@ import frappe
 from frappe.utils import date_diff, flt
 
 @frappe.whitelist()
+def get_permission_query_conditions(user):
+    """
+    Permission query conditions for Resource Allocation List View
+    Controls which documents appear in the list based on user role
+    """
+    if not user:
+        user = frappe.session.user
+    
+    # System Manager sees all
+    if frappe.user.has_role('System Manager', user):
+        return ""
+    
+    # CGO sees all documents
+    if frappe.user.has_role('CGO', user):
+        return ""
+    
+    # Regular employees see only their own requests
+    return f"(`tabResource Allocation`.`requested_by` = '{user}')"
+
+@frappe.whitelist()
+def has_permission(doc, user=None, permission_type=None):
+    """
+    Custom permission logic for Resource Allocation documents
+    Controls read, write, create, delete, submit permissions
+    """
+    if not user:
+        user = frappe.session.user
+    
+    # System Manager has all permissions
+    if frappe.user.has_role('System Manager', user):
+        return True
+    
+    # Handle new documents (not saved yet)
+    if not doc or not hasattr(doc, 'name') or not doc.name:
+        # Anyone can create new documents
+        if permission_type == 'create':
+            return True
+        return True
+    
+    # Get document status
+    status = getattr(doc, 'status', None)
+    requested_by = getattr(doc, 'requested_by', None)
+    
+    # Permission logic based on status and user role
+    if status == "Draft":
+        return handle_draft_permissions(doc, user, permission_type, requested_by)
+    elif status == "Requested":
+        return handle_requested_permissions(doc, user, permission_type, requested_by)
+    elif status in ["Approved", "Rejected"]:
+        return handle_final_permissions(doc, user, permission_type, requested_by)
+    
+    # Default: allow read access
+    return permission_type == 'read'
+
+def handle_draft_permissions(doc, user, permission_type, requested_by):
+    """Handle permissions for Draft status documents"""
+    
+    # CGO cannot edit draft documents (they shouldn't interfere at this stage)
+    if frappe.user.has_role('CGO', user):
+        if permission_type in ['write', 'delete']:
+            return False
+        return True  # Can read
+    
+    # Owner/requester can edit and delete draft documents
+    if requested_by == user:
+        if permission_type in ['read', 'write', 'delete']:
+            return True
+        if permission_type == 'submit':
+            return False  # Draft documents don't get submitted, they get "requested"
+    
+    # Others can only read
+    return permission_type == 'read'
+
+def handle_requested_permissions(doc, user, permission_type, requested_by):
+    """Handle permissions for Requested status documents"""
+    
+    # CGO can approve/reject (submit) and read
+    if frappe.user.has_role('CGO', user):
+        if permission_type in ['read', 'submit']:
+            return True
+        if permission_type in ['write', 'delete']:
+            return False  # No editing allowed, only approve/reject
+    
+    # Owner/requester can only read (no editing after request)
+    if requested_by == user:
+        if permission_type == 'read':
+            return True
+        return False  # Cannot edit, delete, or submit
+    
+    # Others can only read
+    return permission_type == 'read'
+
+def handle_final_permissions(doc, user, permission_type, requested_by):
+    """Handle permissions for Approved/Rejected status documents"""
+    
+    # No one can edit approved/rejected documents
+    if permission_type in ['write', 'delete', 'submit']:
+        return False
+    
+    # Everyone can read final documents
+    return permission_type == 'read'
+
+def validate_resource_allocation_status_change(doc, method):
+    """Validate status changes in Resource Allocation"""
+    if not doc.is_new():
+        old_doc = doc.get_doc_before_save()
+        if old_doc and old_doc.status != doc.status:
+            
+            # Validate Draft → Requested transition
+            if old_doc.status == "Draft" and doc.status == "Requested":
+                validate_draft_to_requested(doc)
+            
+            # Validate Requested → Approved/Rejected transition
+            elif old_doc.status == "Requested" and doc.status in ["Approved", "Rejected"]:
+                validate_requested_to_final(doc)
+            
+            # Prevent invalid status changes
+            else:
+                frappe.throw(_("Invalid status change from {0} to {1}").format(
+                    old_doc.status, doc.status))
+
+def validate_draft_to_requested(doc):
+    """Validate Draft to Requested status change"""
+    
+    # Only the requester can request
+    if doc.requested_by != frappe.session.user:
+        frappe.throw(_("Only the requester can submit this allocation request"))
+    
+    # Validate that an employee is selected
+    if not hasattr(doc, 'available_employees_table') or not doc.available_employees_table:
+        frappe.throw(_("Please refresh the form to load available employees"))
+    
+    selected_employees = [row for row in doc.available_employees_table if row.select_employee]
+    if len(selected_employees) != 1:
+        frappe.throw(_("Please select exactly one employee before requesting"))
+    
+    # Validate selected employee is available
+    selected_emp = selected_employees[0]
+    if not selected_emp.is_available:
+        frappe.throw(_("Selected employee {0} is not available for this allocation").format(
+            selected_emp.employee_name))
+
+def validate_requested_to_final(doc):
+    """Validate Requested to Approved/Rejected status change"""
+    
+    # Only CGO can approve/reject
+    if not frappe.user.has_role('CGO'):
+        frappe.throw(_("Only CGO can approve or reject resource allocation requests"))
+    
+    # For approval, re-validate employee availability
+    if doc.status == "Approved":
+        selected_employees = [row for row in doc.available_employees_table if row.select_employee]
+        if len(selected_employees) != 1:
+            frappe.throw(_("Please ensure exactly one employee is selected"))
+
+def before_save_resource_allocation(doc, method):
+    """Before save hook for Resource Allocation"""
+    
+    # Set requested_by to current user for new documents
+    if doc.is_new() and not doc.requested_by:
+        doc.requested_by = frappe.session.user
+    
+    # Set request_date for new documents
+    if doc.is_new() and not doc.request_date:
+        doc.request_date = frappe.utils.today()
+    
+    # Prevent modification of final status documents
+    if not doc.is_new() and doc.status in ["Approved", "Rejected"]:
+        if not frappe.user.has_role('System Manager'):
+            old_doc = doc.get_doc_before_save()
+            if old_doc and old_doc.status in ["Approved", "Rejected"]:
+                frappe.throw(_("Cannot modify {0} resource allocations").format(
+                    doc.status.lower()))
+
+def on_submit_resource_allocation(doc, method):
+    """On submit hook for Resource Allocation"""
+    
+    # Only allow submission of approved documents
+    if doc.status != "Approved":
+        frappe.throw(_("Only approved resource allocations can be submitted"))
+    
+    # Only CGO can submit
+    if not frappe.user.has_role('CGO') and not frappe.user.has_role('System Manager'):
+        frappe.throw(_("Only CGO can submit resource allocations"))
+
+def on_update_after_submit_resource_allocation(doc, method):
+    """Handle updates after document submission"""
+    pass
+
+def on_cancel_resource_allocation(doc, method):
+    """Handle document cancellation"""
+    
+    # Only System Manager and CGO can cancel
+    if not (frappe.user.has_role('System Manager') or frappe.user.has_role('CGO')):
+        frappe.throw(_("Only System Manager or CGO can cancel resource allocations"))
+
+def send_pending_approval_reminders():
+    """Send reminders for pending approvals (daily task)"""
+    pass
+
+def send_allocation_ending_notifications():
+    """Send notifications for allocations ending soon (daily task)"""
+    pass
+
+def generate_weekly_reports():
+    """Generate weekly resource allocation reports (weekly task)"""
+    pass
+
+def archive_old_allocations():
+    """Archive old completed allocations (monthly task)"""
+    pass
+
+@frappe.whitelist()
 def get_available_employees(project, start_date, end_date, allocation_percentage, current_allocation=""):
     """Get list of available and unavailable employees for the given period"""
     
