@@ -13,16 +13,20 @@ def get_permission_query_conditions(user):
     if not user:
         user = frappe.session.user
     
+    # Handle cases where user might be None
+    if not user:
+        return "1=0"  # No access if user is None
+    
     # System Manager sees all
-    if frappe.user.has_role('System Manager', user):
+    if user in frappe.get_roles("System Manager"):
         return ""
     
     # CGO sees all documents
-    if frappe.user.has_role('CGO', user):
+    if "CGO" in frappe.get_roles(user):
         return ""
     
     # Regular employees see only their own requests
-    return f"(`tabResource Allocation`.`requested_by` = '{user}')"
+    return f"(`tabResource Allocation`.`requested_by` = '{frappe.db.escape(user)}')"
 
 @frappe.whitelist()
 def has_permission(doc, user=None, permission_type=None):
@@ -33,8 +37,12 @@ def has_permission(doc, user=None, permission_type=None):
     if not user:
         user = frappe.session.user
     
+    # Handle cases where user might be None
+    if not user:
+        return False
+    
     # System Manager has all permissions
-    if frappe.user.has_role('System Manager', user):
+    if user in frappe.get_roles("System Manager"):
         return True
     
     # Handle new documents (not saved yet)
@@ -63,7 +71,7 @@ def handle_draft_permissions(doc, user, permission_type, requested_by):
     """Handle permissions for Draft status documents"""
     
     # CGO cannot edit draft documents (they shouldn't interfere at this stage)
-    if frappe.user.has_role('CGO', user):
+    if "CGO" in frappe.get_roles(user):
         if permission_type in ['write', 'delete']:
             return False
         return True  # Can read
@@ -82,7 +90,7 @@ def handle_requested_permissions(doc, user, permission_type, requested_by):
     """Handle permissions for Requested status documents"""
     
     # CGO can approve/reject (submit) and read
-    if frappe.user.has_role('CGO', user):
+    if "CGO" in frappe.get_roles(user):
         if permission_type in ['read', 'submit']:
             return True
         if permission_type in ['write', 'delete']:
@@ -151,7 +159,7 @@ def validate_requested_to_final(doc):
     """Validate Requested to Approved/Rejected status change"""
     
     # Only CGO can approve/reject
-    if not frappe.user.has_role('CGO'):
+    if "CGO" not in frappe.get_roles():
         frappe.throw(_("Only CGO can approve or reject resource allocation requests"))
     
     # For approval, re-validate employee availability
@@ -173,7 +181,7 @@ def before_save_resource_allocation(doc, method):
     
     # Prevent modification of final status documents
     if not doc.is_new() and doc.status in ["Approved", "Rejected"]:
-        if not frappe.user.has_role('System Manager'):
+        if "System Manager" not in frappe.get_roles():
             old_doc = doc.get_doc_before_save()
             if old_doc and old_doc.status in ["Approved", "Rejected"]:
                 frappe.throw(_("Cannot modify {0} resource allocations").format(
@@ -187,7 +195,8 @@ def on_submit_resource_allocation(doc, method):
         frappe.throw(_("Only approved resource allocations can be submitted"))
     
     # Only CGO can submit
-    if not frappe.user.has_role('CGO') and not frappe.user.has_role('System Manager'):
+    user_roles = frappe.get_roles()
+    if "CGO" not in user_roles and "System Manager" not in user_roles:
         frappe.throw(_("Only CGO can submit resource allocations"))
 
 def on_update_after_submit_resource_allocation(doc, method):
@@ -198,7 +207,8 @@ def on_cancel_resource_allocation(doc, method):
     """Handle document cancellation"""
     
     # Only System Manager and CGO can cancel
-    if not (frappe.user.has_role('System Manager') or frappe.user.has_role('CGO')):
+    user_roles = frappe.get_roles()
+    if not ("System Manager" in user_roles or "CGO" in user_roles):
         frappe.throw(_("Only System Manager or CGO can cancel resource allocations"))
 
 def send_pending_approval_reminders():
