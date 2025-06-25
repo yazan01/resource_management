@@ -1,0 +1,100 @@
+{
+    "actions": [],
+    "allow_rename": 1,
+    "creation": "2023-04-22 12:00:00.000000",
+    "doctype": "DocType",
+    "editable_grid": 1,
+    "engine": "InnoDB",
+    "field_order": [
+     "employee",
+     "employee_name",
+     "department",
+     "current_allocation",
+     "available_allocation",
+     "hourly_cost_rate",
+     "estimated_cost",
+     "is_available",
+     "select_employee"
+    ],
+    "fields": [
+     {
+      "fieldname": "employee",
+      "fieldtype": "Link",
+      "in_list_view": 1,
+      "label": "Employee",
+      "options": "Employee",
+      "read_only": 1
+     },
+     {
+      "fetch_from": "employee.employee_name",
+      "fieldname": "employee_name",
+      "fieldtype": "Data",
+      "in_list_view": 1,
+      "label": "Employee Name",
+      "read_only": 1
+     },
+     {
+      "fetch_from": "employee.department",
+      "fieldname": "department",
+      "fieldtype": "Data",
+      "in_list_view": 1,
+      "label": "Department",
+      "read_only": 1
+     },
+     {
+      "fieldname": "current_allocation",
+      "fieldtype": "Percent",
+      "in_list_view": 1,
+      "label": "Current Allocation %",
+      "read_only": 1
+     },
+     {
+      "fieldname": "available_allocation",
+      "fieldtype": "Percent",
+      "in_list_view": 1,
+      "label": "Available %",
+      "read_only": 1
+     },
+     {
+      "fetch_from": "employee.hourly_cost_rate",
+      "fieldname": "hourly_cost_rate",
+      "fieldtype": "Currency",
+      "label": "Hourly Rate",
+      "read_only": 1
+     },
+     {
+      "fieldname": "estimated_cost",
+      "fieldtype": "Currency",
+      "label": "Estimated Cost",
+      "read_only": 1
+     },
+     {
+      "default": "0",
+      "fieldname": "is_available",
+      "fieldtype": "Check",
+      "in_list_view": 1,
+      "label": "Available",
+      "read_only": 1
+     },
+     {
+      "default": "0",
+      "fieldname": "select_employee",
+      "fieldtype": "Check",
+      "in_list_view": 1,
+      "label": "Select"
+     }
+    ],
+    "is_child_table": 1,
+    "istable": 1,
+    "links": [],
+    "modified": "2023-04-22 12:00:00.000000",
+    "modified_by": "Administrator",
+    "module": "Resource Management",
+    "name": "Resource Allocation Employee",
+    "owner": "Administrator",
+    "permissions": [],
+    "sort_field": "modified",
+    "sort_order": "DESC",
+    "states": [],
+    "track_changes": 1
+}
