@@ -1,0 +1,195 @@
+{
+    "actions": [],
+    "allow_rename": 1,
+    "autoname": "RA.#####",
+    "creation": "2023-04-22 12:00:00.000000",
+    "doctype": "DocType",
+    "editable_grid": 1,
+    "engine": "InnoDB",
+    "field_order": [
+     "project_section",
+     "project",
+     "project_name",
+     "column_break_1",
+     "start_date",
+     "end_date",
+     "allocation_percentage",
+     "available_employees_section",
+     "available_employees_table",
+     "request_details_section",
+     "requested_by",
+     "requested_by_name",
+     "column_break_17",
+     "request_date",
+     "workflow_section",
+     "status",
+     "column_break_20",
+     "notes"
+    ],
+    "fields": [
+     {
+      "fieldname": "project_section",
+      "fieldtype": "Section Break",
+      "label": "Project Details"
+     },
+     {
+      "fieldname": "project",
+      "fieldtype": "Link",
+      "in_list_view": 1,
+      "label": "Project",
+      "options": "Project",
+      "reqd": 1
+     },
+     {
+      "fetch_from": "project.project_name",
+      "fieldname": "project_name",
+      "fieldtype": "Data",
+      "label": "Project Name",
+      "read_only": 1
+     },
+     {
+      "fieldname": "column_break_1",
+      "fieldtype": "Column Break"
+     },
+     {
+      "fieldname": "start_date",
+      "fieldtype": "Date",
+      "in_list_view": 1,
+      "label": "Start Date",
+      "reqd": 1
+     },
+     {
+      "fieldname": "end_date",
+      "fieldtype": "Date",
+      "in_list_view": 1,
+      "label": "End Date",
+      "reqd": 1
+     },
+     {
+      "fieldname": "allocation_percentage",
+      "fieldtype": "Percent",
+      "in_list_view": 1,
+      "label": "Allocation Percentage",
+      "reqd": 1
+     },
+     {
+      "fieldname": "available_employees_section",
+      "fieldtype": "Section Break",
+      "label": "Available Employees"
+     },
+     {
+      "fieldname": "available_employees_table",
+      "fieldtype": "Table",
+      "label": "Employee Availability",
+      "options": "Resource Allocation Employee",
+      "read_only": 1
+     },
+     {
+      "fieldname": "request_details_section",
+      "fieldtype": "Section Break",
+      "label": "Request Details"
+     },
+     {
+      "default": "user",
+      "fieldname": "requested_by",
+      "fieldtype": "Link",
+      "label": "Requested By",
+      "options": "User",
+      "read_only": 1,
+      "reqd": 1
+     },
+     {
+      "fetch_from": "requested_by.full_name",
+      "fieldname": "requested_by_name",
+      "fieldtype": "Data",
+      "label": "Requested By Name",
+      "read_only": 1
+     },
+     {
+      "fieldname": "column_break_17",
+      "fieldtype": "Column Break"
+     },
+     {
+      "default": "Today",
+      "fieldname": "request_date",
+      "fieldtype": "Date",
+      "label": "Request Date",
+      "read_only": 1,
+      "reqd": 1
+     },
+     {
+      "fieldname": "workflow_section",
+      "fieldtype": "Section Break",
+      "label": "Workflow"
+     },
+     {
+      "default": "Draft",
+      "fieldname": "status",
+      "fieldtype": "Select",
+      "in_list_view": 1,
+      "label": "Status",
+      "options": "Draft\nRequested\nApproved\nRejected",
+      "reqd": 1
+     },
+     {
+      "fieldname": "column_break_20",
+      "fieldtype": "Column Break"
+     },
+     {
+      "fieldname": "notes",
+      "fieldtype": "Text Editor",
+      "label": "Notes"
+     }
+    ],
+    "is_submittable": 1,
+    "links": [],
+    "modified": "2023-04-22 12:00:00.000000",
+    "modified_by": "Administrator",
+    "module": "Resource Management",
+    "name": "Resource Allocation",
+    "naming_rule": "Expression (old style)",
+    "owner": "Administrator",
+    "permissions": [
+     {
+      "create": 1,
+      "delete": 1,
+      "email": 1,
+      "export": 1,
+      "print": 1,
+      "read": 1,
+      "report": 1,
+      "role": "System Manager",
+      "share": 1,
+      "write": 1
+     },
+     {
+      "create": 1,
+      "delete": 0,
+      "email": 1,
+      "export": 1,
+      "print": 1,
+      "read": 1,
+      "report": 1,
+      "role": "Employee",
+      "share": 1,
+      "write": 1
+     },
+     {
+      "create": 0,
+      "delete": 0,
+      "email": 1,
+      "export": 1,
+      "print": 1,
+      "read": 1,
+      "report": 1,
+      "role": "CGO",
+      "share": 1,
+      "submit": 1,
+      "write": 1
+     }
+    ],
+    "sort_field": "modified",
+    "sort_order": "DESC",
+    "states": [],
+    "track_changes": 1
+}
