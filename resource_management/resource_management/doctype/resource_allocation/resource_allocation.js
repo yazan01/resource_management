@@ -78,4 +78,202 @@ function setup_workflow_buttons(frm) {
     
     // Show approve/reject buttons for CGO role when status is Requested
     if (frm.doc.status === "Requested" && !frm.doc.__islocal && 
-        frappe.user.has
+        frappe.user.has_role('CGO')) {
+        
+        frm.add_custom_button(__('Approve'), function() {
+            approve_request(frm);
+        }, __('Actions'));
+        
+        frm.add_custom_button(__('Reject'), function() {
+            reject_request(frm);
+        }, __('Actions'));
+        
+        frm.change_custom_button_type('Approve', null, 'primary');
+        frm.change_custom_button_type('Reject', null, 'danger');
+    }
+}
+
+function set_field_permissions(frm) {
+    // Make all fields read-only based on status and user role
+    let is_editable = (frm.doc.status === "Draft" && !frappe.user.has_role('CGO'));
+    
+    // Project details - editable only in draft for non-CGO users
+    frm.set_df_property('project', 'read_only', !is_editable);
+    frm.set_df_property('start_date', 'read_only', !is_editable);
+    frm.set_df_property('end_date', 'read_only', !is_editable);
+    frm.set_df_property('allocation_percentage', 'read_only', !is_editable);
+    
+    // Request details are always read-only
+    frm.set_df_property('requested_by', 'read_only', 1);
+    frm.set_df_property('request_date', 'read_only', 1);
+    
+    // Status is read-only for employees, editable for CGO
+    frm.set_df_property('status', 'read_only', !frappe.user.has_role('CGO'));
+    
+    // Notes editable only in draft or by CGO
+    frm.set_df_property('notes', 'read_only', 
+        !(frm.doc.status === "Draft" || frappe.user.has_role('CGO')));
+}
+
+function request_allocation(frm) {
+    // Validate that an employee is selected
+    let selected_employees = frm.doc.available_employees_table.filter(r => r.select_employee);
+    
+    if (selected_employees.length === 0) {
+        frappe.msgprint(__("Please select an employee from the available employees table"));
+        return;
+    }
+    
+    if (selected_employees.length > 1) {
+        frappe.msgprint(__("Please select only one employee"));
+        return;
+    }
+    
+    frappe.confirm(
+        __('Are you sure you want to submit this resource allocation request?'),
+        function() {
+            frappe.call({
+                method: "resource_management.api.resource_allocation.request_allocation",
+                args: {
+                    name: frm.doc.name,
+                    selected_employee: selected_employees[0].employee
+                },
+                callback: function(r) {
+                    if (r.message && r.message.status === "success") {
+                        frappe.msgprint(__("Resource Allocation request submitted successfully"));
+                        frm.refresh();
+                    }
+                },
+                error: function(r) {
+                    console.error("Request allocation error:", r);
+                    frappe.msgprint(__("Error submitting request. Please try again."));
+                }
+            });
+        }
+    );
+}
+
+function approve_request(frm) {
+    frappe.confirm(
+        __('Are you sure you want to approve this resource allocation?'),
+        function() {
+            frappe.call({
+                method: "resource_management.api.resource_allocation.approve_request",
+                args: {
+                    name: frm.doc.name
+                },
+                callback: function(r) {
+                    if (r.message && r.message.status === "success") {
+                        frappe.msgprint(__("Resource Allocation approved successfully"));
+                        frm.refresh();
+                    }
+                },
+                error: function(r) {
+                    console.error("Approve request error:", r);
+                    frappe.msgprint(__("Error approving request. Please try again."));
+                }
+            });
+        }
+    );
+}
+
+function reject_request(frm) {
+    frappe.prompt([
+        {
+            fieldname: 'rejection_reason',
+            label: __('Reason for Rejection'),
+            fieldtype: 'Small Text',
+            reqd: 1
+        }
+    ],
+    function(values) {
+        frappe.call({
+            method: "resource_management.api.resource_allocation.reject_request",
+            args: {
+                name: frm.doc.name,
+                rejection_reason: values.rejection_reason
+            },
+            callback: function(r) {
+                if (r.message && r.message.status === "success") {
+                    frappe.msgprint(__("Resource Allocation rejected"));
+                    frm.refresh();
+                }
+            },
+            error: function(r) {
+                console.error("Reject request error:", r);
+                frappe.msgprint(__("Error rejecting request. Please try again."));
+            }
+        });
+    },
+    __('Reject Resource Allocation'),
+    __('Reject')
+    );
+}
+
+function validate_dates(frm) {
+    if (frm.doc.start_date && frm.doc.end_date) {
+        if (frm.doc.end_date < frm.doc.start_date) {
+            frappe.msgprint(__("End Date cannot be before Start Date"));
+            frm.set_value('end_date', '');
+        }
+    }
+}
+
+function update_available_employees(frm) {
+    if (!frm.doc.project || !frm.doc.start_date || !frm.doc.end_date || !frm.doc.allocation_percentage) {
+        return;
+    }
+    
+    frappe.call({
+        method: "resource_management.api.resource_allocation.get_available_employees",
+        args: {
+            project: frm.doc.project,
+            start_date: frm.doc.start_date,
+            end_date: frm.doc.end_date,
+            allocation_percentage: frm.doc.allocation_percentage,
+            current_allocation: frm.doc.name || ""
+        },
+        callback: function(r) {
+            if (r.message) {
+                // Clear existing table
+                frm.clear_table('available_employees_table');
+                
+                // Add available employees first
+                if (r.message.available_employees) {
+                    r.message.available_employees.forEach(function(emp) {
+                        let row = frm.add_child('available_employees_table');
+                        row.employee = emp.employee;
+                        row.employee_name = emp.employee_name;
+                        row.department = emp.department;
+                        row.current_allocation = emp.current_allocation;
+                        row.available_allocation = emp.available_allocation;
+                        row.hourly_cost_rate = emp.hourly_cost_rate;
+                        row.estimated_cost = emp.estimated_cost;
+                        row.is_available = 1;
+                    });
+                }
+                
+                // Add unavailable employees at the end
+                if (r.message.unavailable_employees) {
+                    r.message.unavailable_employees.forEach(function(emp) {
+                        let row = frm.add_child('available_employees_table');
+                        row.employee = emp.employee;
+                        row.employee_name = emp.employee_name;
+                        row.department = emp.department;
+                        row.current_allocation = emp.current_allocation;
+                        row.available_allocation = emp.available_allocation;
+                        row.hourly_cost_rate = emp.hourly_cost_rate;
+                        row.estimated_cost = emp.estimated_cost;
+                        row.is_available = 0;
+                    });
+                }
+                
+                frm.refresh_field('available_employees_table');
+            }
+        },
+        error: function(r) {
+            console.error("Update available employees error:", r);
+            frappe.msgprint(__("Error loading available employees. Please refresh the form."));
+        }
+    });
+}
